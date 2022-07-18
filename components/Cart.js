@@ -6,17 +6,18 @@ import {
   CardInfo,
   EmptyStyle,
   Checkout,
-  Cards
+  Cards,
 } from "../styles/CartStyles";
 import { Quantity } from "../styles/ProductDetails";
 import { FaShoppingCart } from "react-icons/fa";
 import { AiFillMinusCircle, AiFillPlusCircle } from "react-icons/ai";
+import getStripe from "../lib/getStripe";
 
 //Animation variants
 const card = {
   hidden: { opacity: 0, scale: 0.8 },
-  show: { opacity: 1, scale: 1 }
-}
+  show: { opacity: 1, scale: 1 },
+};
 
 const cards = {
   hidden: { opacity: 1 },
@@ -33,6 +34,19 @@ export default function Cart() {
   const { cartItems, showCart, setShowCart, onAdd, onRemove, totalPrice } =
     useStateContext();
 
+  //Payment
+  const handleCheckout = async () => {
+    const stripe = await getStripe();
+    const response = await fetch("/api/stripe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cartItems),
+    });
+    const data = await response.json();
+    
+    await stripe.redirectToCheckout({ sessionId: data.id });
+  };
+
   return (
     <CartWrapper
       animate={{ opacity: 1 }}
@@ -41,12 +55,11 @@ export default function Cart() {
       onClick={() => setShowCart(false)}
     >
       <CartStyle
-        initial={{ x: '50%' }}
-        animate={{ x: '0%' }}
-        exit={{ x: '50%' }}
-        transition={{ type: 'tween' }}
+        initial={{ x: "50%" }}
+        animate={{ x: "0%" }}
+        exit={{ x: "50%" }}
+        transition={{ type: "tween" }}
         onClick={(e) => e.stopPropagation()}
-
       >
         {/* If no items in cart, render empty */}
         {cartItems.length < 1 && (
@@ -60,14 +73,11 @@ export default function Cart() {
           </EmptyStyle>
         )}
         {/* if more than 1 item in cart, map over items and display info */}
-        <Cards variants={cards} initial='hidden' animate='show' layout>
+        <Cards variants={cards} initial="hidden" animate="show" layout>
           {cartItems.length >= 1 &&
             cartItems.map((item) => {
               return (
-                <Card
-                  variants={card}
-                  layout
-                  key={item.slug}>
+                <Card variants={card} layout key={item.slug}>
                   <img
                     src={item.image.data.attributes.formats.thumbnail.url}
                     alt={item.title}
@@ -91,7 +101,10 @@ export default function Cart() {
             })}
         </Cards>
         {cartItems.length >= 1 && (
-          <Checkout><h3>Subtotal: ${totalPrice}</h3><button>Purchase</button></Checkout>
+          <Checkout layout>
+            <h3>Subtotal: ${totalPrice}</h3>
+            <button onClick={handleCheckout}>Purchase</button>
+          </Checkout>
         )}
       </CartStyle>
     </CartWrapper>
